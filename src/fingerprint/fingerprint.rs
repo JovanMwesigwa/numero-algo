@@ -52,6 +52,15 @@ pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<f64>, Strin
     // Apply the filter
     let filtered = apply_fir_filter(&normalized_samples, &kernel);
 
+    // Downsample the filtered signal
+    let decimation_factor = sample_rate as f64 / TARGET_SAMPLE_RATE as f64;
+    let mut downsampled = vec![0.0; filtered.len() / decimation_factor as usize];
+    for i in 0..downsampled.len() {
+        downsampled[i] = filtered[i * decimation_factor as usize];
+    }
+
+    println!("Downsampled signal: {:?}", downsampled);
+
     // // Generate visualizations
     // if let Err(e) = plot_kernel(&kernel, sample_rate, "filter_kernel.png") {
     //     eprintln!("Warning: Failed to plot kernel: {}", e);
