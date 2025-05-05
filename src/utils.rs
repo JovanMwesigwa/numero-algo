@@ -5,7 +5,7 @@ pub fn safe_abs(x: i16) -> f32 {
     if x == i16::MIN {
         32768.0
     } else {
-        (x.abs() as f32)
+        x.abs() as f32
     }
 }
 

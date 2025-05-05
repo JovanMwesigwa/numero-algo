@@ -1,25 +1,16 @@
 // This is the main file for the audio file reader
 
+mod dsp;
 mod fingerprint;
 mod utils;
 mod wav;
 
 use console::style;
 use std::path::Path;
-use tracing::info;
 
-use fingerprint::{finger_print, hash};
+use fingerprint::finger_print;
 
 fn main() {
-    // Initialize the tracing subscriber with a more compact format
-    tracing_subscriber::fmt()
-        .with_target(false)
-        .with_thread_ids(false)
-        .with_file(false)
-        .with_line_number(false)
-        .with_timer(tracing_subscriber::fmt::time::uptime())
-        .init();
-
     let path = "samples/godown.wav";
 
     // Check if file exists
@@ -33,5 +24,5 @@ fn main() {
 
     let fingerprint = finger_print(&samples, sample_rate).unwrap();
 
-    println!("Fingerprint: {:?}", fingerprint);
+    // println!("Fingerprint: {:?}", fingerprint);
 }
