@@ -1,3 +1,4 @@
+use crate::fingerprint::peaks::Peak;
 use plotters::prelude::*;
 use std::path::Path;
 
@@ -278,6 +279,126 @@ pub fn plot_filter_comparison(
         (70, 30),
         ("sans-serif", 20).into_font(),
     ))?;
+
+    root.present()?;
+
+    Ok(())
+}
+
+/// Plot the spectrogram as a heatmap
+pub fn plot_spectrogram(
+    spectrogram: &[Vec<f64>],
+    sample_rate: u32,
+    frame_size: usize,
+    hop_size: usize,
+    peaks: &[Peak],
+    output_path: impl AsRef<Path>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(output_path.as_ref(), (1000, 600)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    // Calculate time and frequency axes
+    let duration = (spectrogram.len() * hop_size) as f64 / sample_rate as f64;
+    let max_freq = sample_rate as f64 / 2.0; // Nyquist frequency
+
+    // Find the maximum magnitude for color scaling (in dB)
+    let max_magnitude = spectrogram
+        .iter()
+        .flat_map(|frame| frame.iter())
+        .fold(0.0_f64, |max, &x| max.max(x));
+
+    // Create the chart
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Spectrogram", ("sans-serif", 30).into_font())
+        .margin(5)
+        .x_label_area_size(40)
+        .y_label_area_size(60)
+        .right_y_label_area_size(60) // Add space for colorbar
+        .build_cartesian_2d(0.0..duration, 0.0..max_freq)?;
+
+    chart
+        .configure_mesh()
+        .x_desc("Time (seconds)")
+        .y_desc("Frequency (Hz)")
+        .label_style(("sans-serif", 15))
+        .draw()?;
+
+    // Create color gradient for the heatmap
+    let color_gradient = colorous::VIRIDIS;
+
+    // Calculate pixel dimensions
+    let pixel_width = 900.0 / spectrogram.len() as f64; // Reduced width to accommodate colorbar
+    let pixel_height = 600.0 / frame_size as f64;
+
+    // Draw each time-frequency bin
+    for (t, frame) in spectrogram.iter().enumerate() {
+        for (f, &magnitude) in frame.iter().take(frame_size / 2).rev().enumerate() {
+            // Reverse frequency order
+            let time = t as f64 * hop_size as f64 / sample_rate as f64;
+            let freq = f as f64 * max_freq / (frame_size / 2) as f64;
+
+            // Convert magnitude to dB and normalize
+            let db = 20.0 * (magnitude / max_magnitude).log10();
+            let normalized = ((db + 100.0) / 100.0).max(0.0).min(1.0);
+
+            let color = color_gradient.eval_continuous(normalized);
+            let rgb = RGBColor(color.r, color.g, color.b);
+
+            // Draw rectangle for this time-frequency bin
+            chart.draw_series(std::iter::once(Rectangle::new(
+                [
+                    (time, freq),
+                    (
+                        time + hop_size as f64 / sample_rate as f64,
+                        freq + max_freq / (frame_size / 2) as f64,
+                    ),
+                ],
+                rgb.filled(),
+            )))?;
+        }
+    }
+
+    // Draw peaks as dark blue dots
+    for peak in peaks {
+        let time = peak.frame_index as f64 * hop_size as f64 / sample_rate as f64;
+        let freq = peak.freq_bin as f64 * max_freq / (frame_size / 2) as f64;
+
+        // Draw small solid dots
+        chart.draw_series(std::iter::once(Circle::new(
+            (time, freq),
+            2,                                               // Reduced size
+            ShapeStyle::from(&RGBColor(0, 0, 139)).filled(), // Dark blue filled dots
+        )))?;
+    }
+
+    // Add colorbar with more width
+    let (main_area, colorbar_area) = root.split_horizontally(920);
+    let mut colorbar = ChartBuilder::on(&colorbar_area)
+        .margin(5)
+        .x_label_area_size(0)
+        .y_label_area_size(40)
+        .build_cartesian_2d(0.0..1.0, -100.0..0.0)?;
+
+    colorbar
+        .configure_mesh()
+        .y_desc("Magnitude (dB)")
+        .label_style(("sans-serif", 15))
+        .draw()?;
+
+    // Draw colorbar with thicker segments
+    for i in 0..100 {
+        let y = i as f64 / 100.0;
+        let color = color_gradient.eval_continuous(y);
+        let rgb = RGBColor(color.r, color.g, color.b);
+
+        colorbar.draw_series(std::iter::once(Rectangle::new(
+            [
+                (0.0, -100.0 + y * 100.0),
+                (1.0, -100.0 + (y + 0.01) * 100.0),
+            ],
+            rgb.filled(),
+        )))?;
+    }
 
     root.present()?;
 

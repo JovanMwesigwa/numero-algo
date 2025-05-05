@@ -3,7 +3,10 @@
 // Inside this function (in fingerprint.go), the raw int16 samples are converted into float64 values scaled between –1 and 1:
 
 use crate::dsp::filter::{apply_fir_filter, generate_low_pass_kernel};
-use crate::dsp::viz::{plot_filter_comparison, plot_kernel, plot_kernel_with_frequency_response};
+use crate::dsp::viz::plot_spectrogram;
+use crate::fingerprint::peaks::detect_peaks;
+use crate::fingerprint::spectogram::compute_spectrogram;
+use crate::fingerprint::utils::{frame_signal, hamming_window};
 
 const TARGET_SAMPLE_RATE: u32 = 11025; // Downsampled rate.
 const FILTER_TAPS: usize = 101; // Samples per frame
@@ -59,26 +62,34 @@ pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<f64>, Strin
         downsampled[i] = filtered[i * decimation_factor as usize];
     }
 
-    println!("Downsampled signal: {:?}", downsampled);
+    // Framing the Signal
+    let frames = frame_signal(&downsampled, FRAME_SIZE, HOP_SIZE);
 
-    // // Generate visualizations
-    // if let Err(e) = plot_kernel(&kernel, sample_rate, "filter_kernel.png") {
-    //     eprintln!("Warning: Failed to plot kernel: {}", e);
-    // }
+    // Windowing
+    let window = hamming_window(FRAME_SIZE);
 
-    // if let Err(e) = plot_kernel_with_frequency_response(&kernel, sample_rate, "filter_analysis.png")
-    // {
-    //     eprintln!("Warning: Failed to plot kernel analysis: {}", e);
-    // }
+    // Compute the spectrogram
+    let spectrogram = compute_spectrogram(
+        frames
+            .iter()
+            .map(|f| f.iter().map(|&x| x as f32).collect())
+            .collect(),
+        window.iter().map(|&x| x as f32).collect(),
+    );
 
-    // if let Err(e) = plot_filter_comparison(
-    //     &normalized_samples,
-    //     &filtered,
-    //     sample_rate,
-    //     "filter_comparison.png",
-    // ) {
-    //     eprintln!("Warning: Failed to plot signal comparison: {}", e);
-    // }
+    // Detect Peaks
+    let peaks = detect_peaks(&spectrogram, NUM_BANDS);
+
+    if let Err(e) = plot_spectrogram(
+        &spectrogram,
+        TARGET_SAMPLE_RATE,
+        FRAME_SIZE,
+        HOP_SIZE,
+        &peaks,
+        "spectrogram.png",
+    ) {
+        eprintln!("Warning: Failed to plot spectrogram: {}", e);
+    }
 
     Ok(filtered) // Return the filtered signal instead of normalized samples
 }
