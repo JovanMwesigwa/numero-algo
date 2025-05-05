@@ -4,6 +4,7 @@
 
 use crate::dsp::filter::{apply_fir_filter, generate_low_pass_kernel};
 use crate::dsp::viz::plot_spectrogram;
+use crate::fingerprint::hash::hash_fingerprint;
 use crate::fingerprint::peaks::detect_peaks;
 use crate::fingerprint::spectogram::compute_spectrogram;
 use crate::fingerprint::utils::{frame_signal, hamming_window};
@@ -15,7 +16,7 @@ const HOP_SIZE: usize = 512; // Hop size for overlapping frames
 const NUM_BANDS: usize = 6; // Number of frequency bands for peak detection
 const TARGET_ZONE_FRAMES: usize = 20; // Maximum frame difference for pairing peaks
 
-pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<f64>, String> {
+pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<u32>, String> {
     // Check if samples are empty or sample rate is lower that the target sample rate
     if samples.is_empty() || sample_rate < TARGET_SAMPLE_RATE {
         return Err("Invalid input: samples are empty or sample rate is too low".to_string());
@@ -91,5 +92,7 @@ pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<f64>, Strin
         eprintln!("Warning: Failed to plot spectrogram: {}", e);
     }
 
-    Ok(filtered) // Return the filtered signal instead of normalized samples
+    // Generate and return the fingerprint hashes
+    let hashes = hash_fingerprint(&peaks, TARGET_ZONE_FRAMES);
+    Ok(hashes)
 }
