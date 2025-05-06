@@ -12,17 +12,12 @@ pub struct Peak {
 }
 
 // DetectPeaks finds the strongest frequency peaks in each band of the spectrogram
-pub fn detect_peaks(spectrogram: &[Vec<f64>], num_of_bands: usize) -> Vec<Peak> {
+pub fn detect_peaks(
+    spectrogram: &[Vec<f64>],
+    num_of_bands: usize,
+    threshold_multiplier: f64,
+) -> Vec<Peak> {
     let mut peaks = Vec::new();
-
-    // First find the global maximum magnitude for thresholding
-    let max_magnitude = spectrogram
-        .iter()
-        .flat_map(|frame| frame.iter())
-        .fold(0.0_f64, |max, &x| max.max(x));
-
-    // Set threshold to keep only strong peaks (e.g. top 10% of max magnitude)
-    let threshold = max_magnitude * 0.1;
 
     for (i, frame) in spectrogram.iter().enumerate() {
         let num_bins = frame.len();
@@ -35,25 +30,31 @@ pub fn detect_peaks(spectrogram: &[Vec<f64>], num_of_bands: usize) -> Vec<Peak> 
                 end = num_bins;
             }
 
+            // Calculate average magnitude in the current band
+            let mut sum_magnitude = 0.0;
+            for j in start..end {
+                sum_magnitude += frame[j];
+            }
+            let average_magnitude = sum_magnitude / (end - start) as f64;
+            let local_threshold = average_magnitude * threshold_multiplier; // Tunable parameter
+
             let mut max_val = -1.0;
             let mut max_bin = None;
 
             for j in start..end {
-                if frame[j] > max_val {
+                if frame[j] > max_val && frame[j] > local_threshold {
+                    // Apply local threshold
                     max_val = frame[j];
                     max_bin = Some(j);
                 }
             }
 
-            // Only keep peaks above the threshold
             if let Some(bin) = max_bin {
-                if max_val > threshold {
-                    peaks.push(Peak {
-                        frame_index: i,
-                        freq_bin: bin,
-                        magnitude: max_val,
-                    });
-                }
+                peaks.push(Peak {
+                    frame_index: i,
+                    freq_bin: bin,
+                    magnitude: max_val,
+                });
             }
         }
     }

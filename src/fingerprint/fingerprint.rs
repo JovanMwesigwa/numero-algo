@@ -15,6 +15,7 @@ const FRAME_SIZE: usize = 1024; // Samples per frame
 const HOP_SIZE: usize = 512; // Hop size for overlapping frames
 const NUM_BANDS: usize = 6; // Number of frequency bands for peak detection
 const TARGET_ZONE_FRAMES: usize = 20; // Maximum frame difference for pairing peaks
+const THRESHOLD_MULTIPLIER: f64 = 0.1; // Threshold multiplier for peak detection
 
 pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<u32>, String> {
     // Check if samples are empty or sample rate is lower that the target sample rate
@@ -79,7 +80,7 @@ pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<u32>, Strin
     );
 
     // Detect Peaks
-    let peaks = detect_peaks(&spectrogram, NUM_BANDS);
+    let peaks = detect_peaks(&spectrogram, NUM_BANDS, THRESHOLD_MULTIPLIER);
 
     if let Err(e) = plot_spectrogram(
         &spectrogram,
