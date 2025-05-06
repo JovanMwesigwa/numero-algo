@@ -42,56 +42,56 @@ fn main() {
         song_rate
     );
 
-    // Process the test file
-    println!("\n{}", style("Processing test file...").blue().bold());
-    let test_path = "samples/recording.wav";
-    let (test_fp, test_rate, test_duration) = match process_file(test_path) {
-        Ok(result) => result,
-        Err(e) => {
-            println!("{}: {}", style("Error").red().bold(), e);
-            return;
-        }
-    };
+    // // Process the test file
+    // println!("\n{}", style("Processing test file...").blue().bold());
+    // let test_path = "samples/recording.wav";
+    // let (test_fp, test_rate, test_duration) = match process_file(test_path) {
+    //     Ok(result) => result,
+    //     Err(e) => {
+    //         println!("{}: {}", style("Error").red().bold(), e);
+    //         return;
+    //     }
+    // };
 
-    println!(
-        "{} Processed file: {} ({:.2} seconds, {} Hz)",
-        style("✓").green().bold(),
-        style(test_path).yellow(),
-        test_duration,
-        test_rate
-    );
+    // println!(
+    //     "{} Processed file: {} ({:.2} seconds, {} Hz)",
+    //     style("✓").green().bold(),
+    //     style(test_path).yellow(),
+    //     test_duration,
+    //     test_rate
+    // );
 
-    // Compare fingerprints
-    println!("\n{}", style("Comparing fingerprints...").blue().bold());
-    let confidence = match_fingerprints(&test_fp, &song_fp);
+    // // Compare fingerprints
+    // println!("\n{}", style("Comparing fingerprints...").blue().bold());
+    // let confidence = match_fingerprints(&test_fp, &song_fp);
 
-    println!("\nResults:");
-    println!(
-        "• Song fingerprint length: {}",
-        style(song_fp.len()).yellow()
-    );
-    println!(
-        "• Test fingerprint length: {}",
-        style(test_fp.len()).yellow()
-    );
-    println!(
-        "• Match confidence: {}%",
-        style(format!("{:.1}", confidence)).cyan().bold()
-    );
+    // println!("\nResults:");
+    // println!(
+    //     "• Song fingerprint length: {}",
+    //     style(song_fp.len()).yellow()
+    // );
+    // println!(
+    //     "• Test fingerprint length: {}",
+    //     style(test_fp.len()).yellow()
+    // );
+    // println!(
+    //     "• Match confidence: {}%",
+    //     style(format!("{:.1}", confidence)).cyan().bold()
+    // );
 
-    // Interpret results
-    println!("\nInterpretation:");
-    let interpretation = if confidence > 70.0 {
-        "Very strong match - Audio files are very likely the same"
-    } else if confidence > 40.0 {
-        "Strong match - Audio files are probably related"
-    } else if confidence > 20.0 {
-        "Moderate match - Some similarity detected"
-    } else if confidence > 5.0 {
-        "Weak match - Slight similarity detected"
-    } else {
-        "No significant match - Audio files are different"
-    };
+    // // Interpret results
+    // println!("\nInterpretation:");
+    // let interpretation = if confidence > 70.0 {
+    //     "Very strong match - Audio files are very likely the same"
+    // } else if confidence > 40.0 {
+    //     "Strong match - Audio files are probably related"
+    // } else if confidence > 20.0 {
+    //     "Moderate match - Some similarity detected"
+    // } else if confidence > 5.0 {
+    //     "Weak match - Slight similarity detected"
+    // } else {
+    //     "No significant match - Audio files are different"
+    // };
 
-    println!("{}", style(interpretation).yellow().bold());
+    // println!("{}", style(interpretation).yellow().bold());
 }
