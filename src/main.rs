@@ -10,10 +10,20 @@ use rusty_chromaprint::{match_fingerprints, Configuration};
 
 fn main() -> anyhow::Result<()> {
     let config = Configuration::preset_test1();
-    let song_path = "samples/song1.wav";
-    let test_path = "samples/recording.wav";
+    // let song_path = "samples/song1.wav";
+    // let test_path = "samples/recording.wav";
 
-    println!("Processing original song...");
+    let args: Vec<_> = std::env::args_os().collect();
+
+    if args.len() != 3 {
+        eprintln!("missing paths to files");
+        return Ok(());
+    }
+
+    let song_path = &args[1];
+    let test_path = &args[2];
+
+    std::println!("Processing original song...");
     let fp1 = calc_fingerprint(song_path, &config, Some("original.png"))?;
 
     println!("Processing test recording...");
