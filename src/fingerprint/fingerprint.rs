@@ -110,9 +110,70 @@ pub fn finger_print(samples: &[i16], sample_rate: u32) -> Result<Vec<u32>, Strin
     Ok(hashes)
 }
 
+pub fn plot_file_spectrogram(
+    samples: &[i16],
+    sample_rate: u32,
+    out_path: &str,
+) -> Result<(), String> {
+    // Normalize samples
+    let max_abs = samples
+        .iter()
+        .map(|&s| {
+            if s == i16::MIN {
+                32768_i32
+            } else {
+                s.abs() as i32
+            }
+        })
+        .max()
+        .unwrap_or(1) as f64;
+
+    let normalized_samples: Vec<f64> = samples
+        .iter()
+        .map(|&s| {
+            if s == i16::MIN {
+                -1.0
+            } else {
+                (s as f64) / max_abs
+            }
+        })
+        .collect();
+
+    // Frame the signal
+    let frames = frame_signal(&normalized_samples, FRAME_SIZE, HOP_SIZE);
+    let window = hamming_window(FRAME_SIZE);
+
+    // Compute spectrogram
+    let spectrogram = compute_spectrogram(
+        frames
+            .iter()
+            .map(|f| f.iter().map(|&x| x as f32).collect())
+            .collect(),
+        window.iter().map(|&x| x as f32).collect(),
+    );
+
+    // Detect peaks
+    let peaks = detect_peaks(&spectrogram, NUM_BANDS);
+
+    // Plot spectrogram with peaks
+    if let Err(e) = plot_spectrogram(
+        &spectrogram,
+        sample_rate,
+        FRAME_SIZE,
+        HOP_SIZE,
+        &peaks,
+        out_path,
+    ) {
+        eprintln!("Warning: Failed to plot spectrogram: {}", e);
+    }
+
+    Ok(())
+}
+
 pub fn calc_fingerprint(
     path: impl AsRef<Path>,
     config: &Configuration,
+    plot_path: Option<&str>,
 ) -> anyhow::Result<Vec<u32>> {
     let path = path.as_ref();
     let src = File::open(path)?;
@@ -163,6 +224,7 @@ pub fn calc_fingerprint(
         .context("initializing fingerprinter")?;
 
     let mut sample_buf = None;
+    let mut all_samples = Vec::new();
 
     loop {
         let packet = match format.next_packet() {
@@ -185,12 +247,20 @@ pub fn calc_fingerprint(
                 if let Some(buf) = &mut sample_buf {
                     buf.copy_interleaved_ref(audio_buf);
                     printer.consume(buf.samples());
+                    all_samples.extend_from_slice(buf.samples());
                 }
             }
             Err(Error::DecodeError(_)) => (),
             Err(_) => break,
         }
     }
+
+    // Plot spectrogram if requested
+    // if let Some(out_path) = plot_path {
+    //     if let Err(e) = plot_file_spectrogram(&all_samples, sample_rate, out_path) {
+    //         eprintln!("Warning: Failed to plot spectrogram: {}", e);
+    //     }
+    // }
 
     printer.finish();
     Ok(printer.fingerprint().to_vec())
